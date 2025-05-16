@@ -103,4 +103,4 @@ This test suite can be integrated with CI/CD pipelines to run tests automaticall
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the LICENSE file for details.

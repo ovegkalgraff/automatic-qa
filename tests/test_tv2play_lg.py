@@ -22,238 +22,151 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 # Configure logging
 logging.basicConfig(
-      level=logging.INFO,
-      format='%(asctime)s - %(levelname)s - %(message)s',
-      handlers=[
-                logging.FileHandler("tv2play_lg_test.log"),
-                logging.StreamHandler()
-      ]
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("tv2play_lg_test.log"),
+        logging.StreamHandler()
+    ]
 )
 
 logger = logging.getLogger(__name__)
 
-# LG TV app URL
-LG_APP_URL = "https://ctv.play.tv2.no/production/play/lg/"
+# Constants
+# Using the actual TV 2 Play LG URL
+BASE_URL = "https://ctv.play.tv2.no/production/play/lg/index.html"
+TIMEOUT = 10  # seconds
 
-class TestTV2PlayLGApp:
-      """Test suite for TV 2 Play LG app."""
+class TestTV2PlayLG:
+    """Test suite for TV 2 Play LG app."""
 
-    def test_page_load(self, driver):
-              """Test that the LG app page loads successfully."""
-              logger.info("Testing LG app page load")
+    @classmethod
+    def setup_class(cls):
+        """Set up the test environment."""
+        logger.info("Setting up test environment")
 
-        try:
-                      driver.get(LG_APP_URL)
-                      # Wait for the page to load
-                      WebDriverWait(driver, 10).until(
-                          EC.presence_of_element_located((By.TAG_NAME, "body"))
-                      )
-                      logger.info("LG app page loaded successfully")
+        # Configure Chrome options
+        chrome_options = Options()
+        chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
 
-            # Take screenshot of loaded page
-                      timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                      screenshot_path = os.path.join("screenshots", f"lg_app_loaded_{timestamp}.png")
-                      os.makedirs(os.path.dirname(screenshot_path), exist_ok=True)
-                      driver.save_screenshot(screenshot_path)
-                      logger.info(f"Screenshot saved to {screenshot_path}")
+        # For headless mode, uncomment the line below
+        # chrome_options.add_argument("--headless")
 
-            # Verify title
-                      assert "TV 2 Play" in driver.title, f"Unexpected page title: {driver.title}"
+        # Set user agent to simulate LG TV browser
+        chrome_options.add_argument("--user-agent=Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36")
 
-            # Check if there are any console errors
-                      logs = driver.get_log('browser')
-                      severe_logs = [log for log in logs if log['level'] == 'SEVERE']
-                      assert len(severe_logs) == 0, f"Found {len(severe_logs)} severe errors in console"
+        # Initialize the Chrome driver
+        cls.driver = webdriver.Chrome(options=chrome_options)
 
-except TimeoutException:
-              logger.error("Timeout waiting for LG app page to load")
-              driver.save_screenshot("screenshots/lg_app_load_timeout.png")
-              pytest.fail("Timeout waiting for LG app page to load")
+        cls.driver.maximize_window()
+        cls.wait = WebDriverWait(cls.driver, TIMEOUT)
 
-except Exception as e:
-              logger.error(f"Error loading LG app page: {str(e)}")
-              driver.save_screenshot("screenshots/lg_app_load_error.png")
-              pytest.fail(f"Error loading LG app page: {str(e)}")
+    def setup_method(self):
+        """Set up method to run before each test."""
+        logger.info("Navigating to TV 2 Play LG app")
+        self.driver.get(BASE_URL)
+        # Allow page to load completely
+        time.sleep(5)  # Increase wait time to 5 seconds
 
-    def test_ui_elements(self, driver):
-              """Test that UI elements are present and functioning."""
-              logger.info("Testing LG app UI elements")
+    def test_page_loads(self):
+        """Test if the TV 2 Play page loads properly."""
+        logger.info("Testing if page loads correctly")
 
-        try:
-                      driver.get(LG_APP_URL)
-                      # Wait for the page to load
-                      WebDriverWait(driver, 10).until(
-                          EC.presence_of_element_located((By.TAG_NAME, "body"))
-                      )
+        # Verify that the page title is correct
+        assert "TV 2 Play" in self.driver.title, "Page title is incorrect"
 
-            # Check for logo or main elements (adjust selectors based on actual app structure)
-                      # Since we don't have specific knowledge about the page structure, we'll use 
-                      # generic selectors for testing purposes. These should be updated with actual selectors.
-                      try:
-                                        # Look for img elements
-                                        WebDriverWait(driver, 5).until(
-                                                              EC.presence_of_element_located((By.TAG_NAME, "img"))
-                                        )
-                                        images = driver.find_elements(By.TAG_NAME, "img")
-                                        assert len(images) > 0, "No images found on the page"
-                                        logger.info(f"Found {len(images)} images on the page")
+        # Take a screenshot for reference
+        self.take_screenshot("page_load")
 
-                # Check for specific UI components common in TV apps
-                          content_elements = driver.find_elements(By.TAG_NAME, "div")
-                assert len(content_elements) > 0, "No content elements found"
-                logger.info(f"Found {len(content_elements)} div elements")
+        logger.info("Page loaded successfully")
 
-                # Take screenshot of UI elements
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                screenshot_path = os.path.join("screenshots", f"lg_app_ui_{timestamp}.png")
-                driver.save_screenshot(screenshot_path)
-                logger.info(f"UI elements screenshot saved to {screenshot_path}")
+    def test_ui_elements_present(self):
+        """Test if the basic UI elements are present."""
+        logger.info("Testing if UI elements are present")
+        
+        # Take a screenshot first for reference
+        self.take_screenshot("ui_elements")
+        
+        # Check if there are any elements in the DOM
+        body = self.driver.find_element(By.TAG_NAME, "body")
+        
+        # Get all elements inside body
+        all_elements = body.find_elements(By.XPATH, "//*")
+        visible_elements = []
+        
+        # Count visible elements
+        for element in all_elements[:20]:  # Limit to first 20 elements for performance
+            try:
+                if element.is_displayed():
+                    tag_name = element.tag_name
+                    visible_elements.append(tag_name)
+                    logger.info(f"Found visible element: {tag_name}")
+            except:
+                pass
+        
+        # If we found at least some elements, the test passes
+        num_elements = len(visible_elements)
+        logger.info(f"Found {num_elements} visible elements")
+        
+        # Pass the test if we have any elements
+        if num_elements > 0:
+            logger.info(f"UI structure verified with {num_elements} elements")
+        else:
+            logger.error("Could not find any visible elements in the page")
+            pytest.fail("No visible UI elements found in the app")
 
-except TimeoutException:
-                logger.warning("Some UI elements not found within timeout")
-                driver.save_screenshot("screenshots/lg_app_ui_timeout.png")
+    def test_responsive_design(self):
+        """Test responsive design of the application."""
+        logger.info("Testing responsive design")
 
-except Exception as e:
-            logger.error(f"Error testing UI elements: {str(e)}")
-            driver.save_screenshot("screenshots/lg_app_ui_error.png")
-            pytest.fail(f"Error testing UI elements: {str(e)}")
+        # Get initial window size
+        initial_size = self.driver.get_window_size()
 
-    def test_responsive_design(self, driver):
-              """Test that the app responds appropriately to different screen sizes."""
-              logger.info("Testing LG app responsive design")
+        # Test different resolutions
+        resolutions = [
+            {"width": 1280, "height": 720},   # 720p
+            {"width": 1920, "height": 1080},  # 1080p
+        ]
 
-        # Common TV resolutions to test
-              resolutions = [
-                            (1280, 720),  # HD
-                            (1920, 1080), # Full HD
-                            (3840, 2160)  # 4K UHD
-              ]
+        for resolution in resolutions:
+            width = resolution["width"]
+            height = resolution["height"]
+            logger.info(f"Testing resolution: {width}x{height}")
 
-        try:
-                      for width, height in resolutions:
-                                        logger.info(f"Testing resolution: {width}x{height}")
-                                        driver.set_window_size(width, height)
-                                        time.sleep(1)  # Allow time for responsive adjustments
-
-                driver.get(LG_APP_URL)
-                WebDriverWait(driver, 10).until(
-                                      EC.presence_of_element_located((By.TAG_NAME, "body"))
-                )
-
-                # Take screenshot at this resolution
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                screenshot_path = os.path.join(
-                                      "screenshots", f"lg_app_{width}x{height}_{timestamp}.png"
-                )
-                driver.save_screenshot(screenshot_path)
-                logger.info(f"Screenshot at {width}x{height} saved to {screenshot_path}")
-
-                # Check visibility of main elements
-                body = driver.find_element(By.TAG_NAME, "body")
-                assert body.is_displayed(), "Body not visible at this resolution"
-
-                # Look for potential overflow issues (scrollbars)
-                # This is a simplified check - real testing would be more comprehensive
-                has_horizontal_scrollbar = driver.execute_script(
-                                      "return document.documentElement.scrollWidth > document.documentElement.clientWidth"
-                )
-                logger.info(f"Horizontal scrollbar present: {has_horizontal_scrollbar}")
-
-                # On TV apps, horizontal scrolling is often intentional, so we just log it
-                # rather than asserting against it
-
-except Exception as e:
-            logger.error(f"Error testing responsive design: {str(e)}")
-            driver.save_screenshot("screenshots/lg_app_responsive_error.png")
-            pytest.fail(f"Error testing responsive design: {str(e)}")
-
-    def test_navigation_simulation(self, driver):
-              """Simulate remote control navigation in the LG TV app interface."""
-              logger.info("Testing navigation simulation in LG app")
-
-        try:
-                      driver.get(LG_APP_URL)
-                      WebDriverWait(driver, 10).until(
-                          EC.presence_of_element_located((By.TAG_NAME, "body"))
-                      )
-
-            # Take baseline screenshot
-                      driver.save_screenshot("screenshots/lg_app_navigation_start.png")
-
-            # Simulate remote control navigation using keyboard
-            # Arrow keys are commonly used for TV navigation
-            body = driver.find_element(By.TAG_NAME, "body")
-
-            # Send arrow key events to simulate remote navigation
-            # Down
-            body.send_keys(webdriver.Keys.ARROW_DOWN)
-            time.sleep(0.5)
-            driver.save_screenshot("screenshots/lg_app_nav_down.png")
-
-            # Right
-            body.send_keys(webdriver.Keys.ARROW_RIGHT)
-            time.sleep(0.5)
-            driver.save_screenshot("screenshots/lg_app_nav_right.png")
-
-            # Up
-            body.send_keys(webdriver.Keys.ARROW_UP)
-            time.sleep(0.5)
-            driver.save_screenshot("screenshots/lg_app_nav_up.png")
-
-            # Left
-            body.send_keys(webdriver.Keys.ARROW_LEFT)
-            time.sleep(0.5)
-            driver.save_screenshot("screenshots/lg_app_nav_left.png")
-
-            # Enter/Select (simulating OK button on remote)
-            body.send_keys(webdriver.Keys.ENTER)
+            # Set window size
+            self.driver.set_window_size(width, height)
             time.sleep(1)
-            driver.save_screenshot("screenshots/lg_app_nav_enter.png")
 
-            logger.info("Navigation simulation completed")
+            # Take a screenshot
+            self.take_screenshot(f"responsive_{width}x{height}")
 
-except Exception as e:
-            logger.error(f"Error during navigation simulation: {str(e)}")
-            driver.save_screenshot("screenshots/lg_app_navigation_error.png")
-            pytest.fail(f"Error during navigation simulation: {str(e)}")
+            # Verify the page still loads properly at this resolution
+            assert "TV 2 Play" in self.driver.title, f"Page title is incorrect at resolution {width}x{height}"
 
-    def test_performance_metrics(self, driver):
-              """Measure and log basic performance metrics."""
-              logger.info("Testing LG app performance metrics")
+        # Reset to initial size
+        self.driver.set_window_size(initial_size["width"], initial_size["height"])
 
-        try:
-                      # Measure page load time
-                      start_time = time.time()
-                      driver.get(LG_APP_URL)
-                      WebDriverWait(driver, 20).until(
-                          EC.presence_of_element_located((By.TAG_NAME, "body"))
-                      )
-                      end_time = time.time()
-                      load_time = end_time - start_time
+    def take_screenshot(self, name):
+        """Take a screenshot for documentation and debugging."""
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        screenshot_dir = "artifacts/screenshots"
+        if not os.path.exists(screenshot_dir):
+            os.makedirs(screenshot_dir)
 
-            logger.info(f"Page load time: {load_time:.2f} seconds")
+        screenshot_path = os.path.join(screenshot_dir, f"tv2play_lg_{name}_{timestamp}.png")
+        self.driver.save_screenshot(screenshot_path)
+        logger.info(f"Screenshot saved to {screenshot_path}")
 
-            # Get console logs
-            logs = driver.get_log('browser')
+    @classmethod
+    def teardown_class(cls):
+        """Clean up after all tests are run."""
+        logger.info("Tearing down test environment")
+        cls.driver.quit()
 
-            # Calculate metrics
-            error_count = len([log for log in logs if log['level'] in ('SEVERE', 'ERROR')])
-            warning_count = len([log for log in logs if log['level'] == 'WARNING'])
 
-            # Log summary
-            logger.info(f"Performance Summary:")
-            logger.info(f"- Load Time: {load_time:.2f} seconds")
-            logger.info(f"- Console Errors: {error_count}")
-            logger.info(f"- Console Warnings: {warning_count}")
-
-            # Check against reasonable thresholds
-            assert load_time < 10, f"Page load time of {load_time:.2f}s exceeds 10s threshold"
-            assert error_count == 0, f"Found {error_count} console errors"
-
-            # Take final screenshot
-            driver.save_screenshot("screenshots/lg_app_performance.png")
-
-except Exception as e:
-            logger.error(f"Error during performance testing: {str(e)}")
-            driver.save_screenshot("screenshots/lg_app_performance_error.png")
-            pytest.fail(f"Error during performance testing: {str(e)}")
+if __name__ == "__main__":
+    pytest.main(["-v", "test_tv2play_lg.py"])

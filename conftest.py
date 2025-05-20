@@ -17,27 +17,27 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 # Configure logging
 logging.basicConfig(
-      level=logging.INFO,
-      format='%(asctime)s - %(levelname)s - %(message)s',
-      handlers=[
-                logging.FileHandler("tv2play_samsung_test.log"),
-                logging.StreamHandler()
-      ]
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("tv2play_samsung_test.log"),
+        logging.StreamHandler()
+    ]
 )
 
 logger = logging.getLogger(__name__)
 
 @pytest.fixture(scope="session")
 def create_screenshots_dir():
-      """Create a directory for storing screenshots if it doesn't exist."""
-      screenshots_dir = "screenshots"
-      if not os.path.exists(screenshots_dir):
-                os.makedirs(screenshots_dir)
-            return screenshots_dir
+    """Create a directory for storing screenshots if it doesn't exist."""
+    screenshots_dir = "screenshots"
+    if not os.path.exists(screenshots_dir):
+        os.makedirs(screenshots_dir)
+    return screenshots_dir
 
 @pytest.fixture(scope="class")
 def chrome_driver():
-      """Provides a configured Chrome WebDriver instance."""
+    """Provides a configured Chrome WebDriver instance."""
     logger.info("Setting up Chrome WebDriver")
 
     # Configure Chrome options
@@ -56,8 +56,8 @@ def chrome_driver():
 
     # Initialize the Chrome driver
     driver = webdriver.Chrome(
-              service=Service(ChromeDriverManager().install()),
-              options=chrome_options
+        service=Service(ChromeDriverManager().install()),
+        options=chrome_options
     )
 
     driver.maximize_window()
@@ -70,24 +70,24 @@ def chrome_driver():
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
-      """Hook to take screenshots on test failures."""
+    """Hook to take screenshots on test failures."""
     outcome = yield
     report = outcome.get_result()
 
     if report.when == "call" and report.failed:
-              # Get the driver from the test
-              try:
-                            driver = item.instance.driver
-                            logger.info(f"Taking screenshot for failed test: {item.name}")
+        # Get the driver from the test
+        try:
+            driver = item.instance.driver
+            logger.info(f"Taking screenshot for failed test: {item.name}")
 
             # Create directory if it doesn't exist
-                  screenshots_dir = "screenshots"
+            screenshots_dir = "screenshots"
             if not os.path.exists(screenshots_dir):
-                              os.makedirs(screenshots_dir)
+                os.makedirs(screenshots_dir)
 
             timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
             screenshot_path = os.path.join(screenshots_dir, f"failure_{item.name}_{timestamp}.png")
             driver.save_screenshot(screenshot_path)
             logger.info(f"Screenshot saved to {screenshot_path}")
-except Exception as e:
+        except Exception as e:
             logger.error(f"Failed to capture screenshot on test failure: {e}")
